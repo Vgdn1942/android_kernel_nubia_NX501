@@ -77,6 +77,9 @@
 #include <mach/restart.h>
 #include <mach/msm_iomap.h>
 #include <mach/msm_serial_hs.h>
+#ifdef CONFIG_ANDROID_RAM_CONSOLE
+#include <linux/persistent_ram.h> 
+#endif
 
 #include "../msm_watchdog.h"
 #include "../board-8064.h"
@@ -164,6 +167,37 @@
 #define PCIE_WAKE_N_PMIC_GPIO 12
 #define PCIE_PWR_EN_PMIC_GPIO 13
 #define PCIE_RST_N_PMIC_MPP 1
+
+#ifdef CONFIG_ANDROID_RAM_CONSOLE
+static struct platform_device ram_console_device = {
+	.name = "ram_console",
+	.id = -1,
+};
+
+static struct persistent_ram_descriptor msm_prd[] __initdata = {
+	{
+		.name = "ram_console",
+		.size = SZ_1M,
+	},
+};
+  
+static struct persistent_ram msm_pr __initdata = {
+	.descs = msm_prd,
+	.num_descs = ARRAY_SIZE(msm_prd),
+	.size = SZ_1M,
+};
+
+void __init add_persistent_ram(void)
+{
+	struct persistent_ram *pram = &msm_pr;
+	struct membank* bank = &meminfo.bank[0];
+
+	pram->start = bank->start + bank->size - SZ_1M;
+
+	persistent_ram_early_init(pram);
+}
+
+#endif
 
 #ifdef CONFIG_KERNEL_MSM_CONTIG_MEM_REGION
 static unsigned msm_contig_mem_size = MSM_CONTIG_MEM_SIZE;
@@ -873,6 +907,11 @@ static void __init apq8064_reserve(void)
 	apq8064_set_display_params(prim_panel_name, ext_panel_name,
 		ext_resolution);
 	msm_reserve();
+	
+#ifdef CONFIG_ANDROID_RAM_CONSOLE
+	add_persistent_ram();
+#endif
+	
 }
 
 static void __init apq8064_early_reserve(void)
@@ -4486,6 +4525,9 @@ static void __init apq8064_common_init(void)
 		platform_device_register(&msm_8960_riva);
 	}
 	BUG_ON(msm_pm_boot_init(&msm_pm_boot_pdata));
+#ifdef CONFIG_ANDROID_RAM_CONSOLE
+	platform_device_register(&ram_console_device);
+#endif
 	apq8064_epm_adc_init();
 }
 
