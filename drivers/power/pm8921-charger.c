@@ -5074,6 +5074,9 @@ void poweroff_charge_check(void)
 	int app_reboot_reason = 0;
     int batt_uv;
 	int batt_inst_irq = 0;
+	char *append_cmdline=" androidboot.mode=%s";
+	char append_cmdline_buf[32] = { 0 };
+	extern char *saved_command_line;
 	
 	poweroffchg_init();
 	
@@ -5087,9 +5090,9 @@ void poweroff_charge_check(void)
 	app_reboot_reason = __raw_readl(restart_reason);
 	__raw_writel(0, restart_reason);
 	
-	printk("__is_usb_on=%d is_dc_on=%d is_batt_on=%d batt_uv=%d batt_irq=%d\n",
+	pr_debug("__is_usb_on=%d is_dc_on=%d is_batt_on=%d batt_uv=%d batt_irq=%d\n",
 		  is_usb_on,is_dc_on,is_batt_on,batt_uv,batt_inst_irq);
-	printk("__pm_poweron_reason=%d app_reboot_reason=0x%x\n",pm_poweron_reason,app_reboot_reason);
+	pr_debug("__pm_poweron_reason=%d app_reboot_reason=0x%x\n",pm_poweron_reason,app_reboot_reason);
 	
 	if( pm_poweron_reason == PM8XXX_RESTART_KPD )
 		goto_poweroffchg = 0;
@@ -5103,7 +5106,12 @@ void poweroff_charge_check(void)
 	else
 		goto_poweroffchg = 0;
 
-	printk("__goto_poweroffchg=%d\n",goto_poweroffchg);
+	pr_info("__goto_poweroffchg=%d\n",goto_poweroffchg);
+	
+	pr_info("Modify fxxxing nubia code to support cm11/cm12/cm12.1 power off charge.");
+	snprintf(append_cmdline_buf, sizeof(append_cmdline_buf) - 1, 
+		append_cmdline, goto_poweroffchg ? ("charger"):("normal"));
+	strncat (saved_command_line, append_cmdline_buf, strlen(append_cmdline_buf));
 }
 
 #endif
